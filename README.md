@@ -2,6 +2,8 @@
 
 **Operational health, in one decision-ready view.**
 
+**Live:** [portfolio-health-fpl.vercel.app](https://portfolio-health-fpl.vercel.app/)
+
 Portfolio Health is an executive ITSM operating dashboard from **Fischer Product Lab**. It presents fictional ServiceNow-style incident, problem, change, and release data as a consolidated leadership view — flow, outcomes, risk, ownership, trend, and release timing — so a portfolio manager can move from awareness to accountability instead of reading ticket-count reports.
 
 > **Synthetic demonstration.** Every record in this product is fictional. The ServiceNow feed indicator is simulated; there is no live integration, no authentication, and no write path. The app displays a persistent DEMO badge and synthetic-data labels in the shell.

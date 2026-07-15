@@ -6,7 +6,7 @@
 |---|---|
 | Repo | `Fischer-Product-Lab/portfolio-health` |
 | Branch | `main` (production) |
-| Live URL | **Not yet deployed publicly** — deployment target pending owner decision (see Deployment notes) |
+| Live URL | https://portfolio-health-fpl.vercel.app/ |
 | Gates | `npm test` (13 tests) · `npm run lint` · `npm run build` · `tsc --noEmit` — all green |
 
 ## What V1 is
@@ -30,9 +30,7 @@ An executive ITSM operating dashboard over synthetic ServiceNow-style data: comp
 
 ## Deployment notes
 
-The build is a fully static export — a standard Vercel import of this repo deploys with defaults (framework auto-detected, no env vars). Steps: [vercel.com/new](https://vercel.com/new) → import `Fischer-Product-Lab/portfolio-health` → Deploy. Every push to `main` auto-redeploys.
-
-No public live URL is claimed until the owner confirms a deploy. When one exists, update: `README.md` (header), this file's status block, `docs/portfolio-health-prd.md` (status line), `docs/highlights.md`, and the About view if the suite links change.
+Deployed on Vercel from `Fischer-Product-Lab/portfolio-health`, production branch `main`, framework auto-detected, no env vars. Every push to `main` auto-redeploys.
 
 ## GitHub hardening
 

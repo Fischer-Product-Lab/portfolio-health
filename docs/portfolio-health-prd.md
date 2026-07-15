@@ -1,6 +1,6 @@
 # Portfolio Health — Product Requirements (V1)
 
-**Status:** V1 complete · read-only synthetic demo · deployment target pending owner decision
+**Status:** V1 complete · read-only synthetic demo · live at [portfolio-health-fpl.vercel.app](https://portfolio-health-fpl.vercel.app/)
 **Owner:** Fischer Product Lab
 
 ## 1. Problem
