@@ -52,7 +52,7 @@ npm run build   # production build (vinext)
 - `tests/` — engine/band/lineage tests and rendered-HTML smoke tests
 - `docs/` — [PRD](docs/portfolio-health-prd.md), [highlights](docs/highlights.md), [build log](docs/BUILD_LOG.md), and [threat model](docs/threat-model.md)
 
-Toolchain: Next.js App Router via [vinext](https://github.com/cloudflare/vinext) (Vite), TypeScript strict mode, no database and no API routes in this increment.
+Toolchain: Next.js App Router with a fully static export (`output: "export"`), TypeScript strict mode, no database, no API routes, no env vars.
 
 ## Fischer Product Lab suite
 

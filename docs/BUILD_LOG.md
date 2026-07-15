@@ -23,18 +23,14 @@ An executive ITSM operating dashboard over synthetic ServiceNow-style data: comp
 
 ## Toolchain notes
 
-- **Runtime:** Next.js App Router via [vinext](https://github.com/cloudflare/vinext) (Vite-based), React 19, TypeScript strict, npm. This differs from the suite's stock-Next siblings; the toolchain was intentionally preserved rather than migrated during V1.
-- **Tests:** Node's built-in runner imports the TypeScript sources directly. On Node 22 this requires `--experimental-strip-types` (harmless no-op on Node ≥ 23). Type-only imports use `import type` so stripped modules stay runnable.
+- **Runtime:** Next.js App Router (stock `next build` with `output: "export"` — fully static site in `out/`), React 19, TypeScript strict, npm. V1 was originally built on a Vite-based Next runtime and migrated to stock Next for the public Vercel deploy; the app code needed only one change (static `metadata` instead of request-header-derived OpenGraph URLs, which are incompatible with static export).
+- **Tests:** Node's built-in runner imports the TypeScript sources directly. On Node 22 this requires `--experimental-strip-types` (harmless no-op on Node ≥ 23). Type-only imports use `import type` so stripped modules stay runnable. The rendered-HTML test asserts against the exported `out/index.html` — the actual deployable artifact.
 - **Windows quirk:** `node --test <directory>` failed to resolve on Windows; test files are listed explicitly in the `test` script.
 - **Project location:** keep the working copy outside OneDrive — sync locks on generated directories cause build failures.
 
-## Deployment notes (owner decision pending)
+## Deployment notes
 
-`npm run build` produces a Cloudflare-workers-style output (`dist/`), not a stock `next build` output. That means a plain Vercel import of this repo will **not** deploy as-is. Options, in rough order of effort:
-
-1. **Keep current private hosting** (works today; not public).
-2. **Deploy the worker to Cloudflare** (Workers/Pages via wrangler) — closest to the current build output.
-3. **Migrate scripts to stock `next build`** for a standard Vercel deploy matching the suite's siblings — a contained follow-up PR (swap `vinext` scripts, verify SSR/SSG behavior, drop worker-specific config).
+The build is a fully static export — a standard Vercel import of this repo deploys with defaults (framework auto-detected, no env vars). Steps: [vercel.com/new](https://vercel.com/new) → import `Fischer-Product-Lab/portfolio-health` → Deploy. Every push to `main` auto-redeploys.
 
 No public live URL is claimed until the owner confirms a deploy. When one exists, update: `README.md` (header), this file's status block, `docs/portfolio-health-prd.md` (status line), `docs/highlights.md`, and the About view if the suite links change.
 
