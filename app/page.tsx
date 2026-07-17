@@ -3,9 +3,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   businessServices,
+  blackoutWindows,
   changeOutcomeTotals,
   changeRecords,
   demoAsOf,
+  freezeExceptions,
   incidentRecords,
   lineageStories,
   monthlyFlow,
@@ -26,9 +28,40 @@ import {
   releaseDate,
   type ServiceHealthResult,
 } from "../lib/health";
+import {
+  assessHorizonReadiness,
+  detectAllFindings,
+  detectConcentrations,
+  deriveDecisionRegister,
+  deriveWeeklyBrief,
+  INTELLIGENCE_HORIZON_DAYS,
+  isHorizonRelease,
+  type ReleaseFinding,
+} from "../lib/release-intelligence";
+import { BriefView } from "./components/brief";
+import {
+  passesIntelligenceFilters,
+  ReadinessChecklist,
+  ReleaseConcentrationPanel,
+  ReleaseFindingsList,
+  ReleaseIntelligenceFilters,
+  ReleaseIntelligenceSummary,
+  type IntelligenceFilters,
+} from "./components/release-intelligence";
+import { StatusPill } from "./components/ui";
 
-type View = "overview" | "services" | "incidents" | "problems" | "changes" | "releases" | "about";
-type FilterState = { status?: string; outcome?: string; priority?: string; service?: string; search?: string; releaseId?: string };
+type View = "overview" | "services" | "incidents" | "problems" | "changes" | "releases" | "brief" | "about";
+type FilterState = {
+  status?: string;
+  outcome?: string;
+  priority?: string;
+  service?: string;
+  search?: string;
+  releaseId?: string;
+  finding?: string;
+  readiness?: string;
+  intelligenceKind?: string;
+};
 
 type Ticket = {
   id: string;
@@ -68,6 +101,7 @@ const navItems: { id: View; label: string; short: string }[] = [
   { id: "problems", label: "Problems", short: "Problems" },
   { id: "changes", label: "Changes", short: "Changes" },
   { id: "releases", label: "Release calendar", short: "Releases" },
+  { id: "brief", label: "Leadership brief", short: "Brief" },
   { id: "about", label: "About & suite", short: "About" },
 ];
 
@@ -184,6 +218,44 @@ const portfolioRecords = { incidents: incidentRecords, problems: problemRecords,
 const serviceHealthResults = businessServices.map((service) => computeServiceHealth(deriveServiceHealthInput(service, portfolioRecords, demoAsOf)));
 const portfolioHealth = computePortfolioHealth(businessServices, serviceHealthResults);
 
+const releaseIntelligenceFindings = detectAllFindings(
+  releaseRecords,
+  businessServices,
+  blackoutWindows,
+  freezeExceptions,
+  demoAsOf,
+);
+const releaseReadinessList = assessHorizonReadiness(releaseRecords, blackoutWindows, freezeExceptions, demoAsOf);
+const releaseConcentrations = detectConcentrations(releaseRecords, businessServices, demoAsOf);
+const decisionRegister = deriveDecisionRegister({
+  releases: releaseRecords,
+  windows: blackoutWindows,
+  exceptions: freezeExceptions,
+  lineage: lineageStories,
+  asOf: demoAsOf,
+});
+const weeklyBrief = deriveWeeklyBrief({
+  asOf: demoAsOf,
+  services: businessServices,
+  serviceResults: serviceHealthResults,
+  portfolio: portfolioHealth,
+  incidents: incidentRecords,
+  changes: changeRecords,
+  releases: releaseRecords,
+  findings: releaseIntelligenceFindings,
+  register: decisionRegister,
+});
+const readinessByReleaseId = new Map(releaseReadinessList.map((item) => [item.releaseId, item]));
+const findingsByReleaseId = new Map<string, ReleaseFinding[]>();
+for (const finding of releaseIntelligenceFindings) {
+  for (const releaseId of finding.releaseIds) {
+    const existing = findingsByReleaseId.get(releaseId) ?? [];
+    existing.push(finding);
+    findingsByReleaseId.set(releaseId, existing);
+  }
+}
+const horizonReleaseCount = releaseRecords.filter((release) => isHorizonRelease(release, demoAsOf)).length;
+
 type ServiceCard = {
   service: BusinessService;
   profile: ServiceProfile;
@@ -251,11 +323,6 @@ function recordLineage(view: "incidents" | "problems" | "changes", id: string): 
 const changeCausedCounts = { P1: 1, P2: 2, P3: 3 } as const;
 const changeCausedExample = (priority: "P1" | "P2" | "P3") =>
   incidentRecords.find((record) => record.causedByChangeId && record.priority === priority);
-
-function StatusPill({ value }: { value: string }) {
-  const key = value.toLowerCase().replaceAll(" ", "-");
-  return <span className={`status-pill status-${key}`}>{value}</span>;
-}
 
 function MiniTrend({ opened, closed }: { opened: number[]; closed: number[] }) {
   const max = Math.max(...opened, ...closed);
@@ -820,14 +887,21 @@ function RecordDrawer({ item, view, onClose, onNavigate }: { item: Ticket; view:
   );
 }
 
-function ReleaseCalendar({ requestedId, openDetail }: { requestedId?: string; openDetail: (view: View, filter?: FilterState) => void }) {
+function ReleaseCalendar({ requestedId, initialFilter, openDetail }: { requestedId?: string; initialFilter: FilterState; openDetail: (view: View, filter?: FilterState) => void }) {
   // Releases are keyed by REL id; V1 deep links used the parent change id, so both resolve.
   const requested = requestedId ? releases.find((item) => item.id === requestedId || item.changeId === requestedId) : undefined;
   const [month, setMonth] = useState(requested?.month ?? currentMonthKey);
   const [selected, setSelected] = useState<Release | null>(requested ?? null);
   const [display, setDisplay] = useState<"calendar" | "agenda">("calendar");
+  const [intelligenceFilters, setIntelligenceFilters] = useState<IntelligenceFilters>({
+    kind: (initialFilter.intelligenceKind as IntelligenceFilters["kind"]) || "all",
+    readiness: (initialFilter.readiness as IntelligenceFilters["readiness"]) || "all",
+    findingId: initialFilter.finding,
+  });
   const monthData = monthMeta.find((item) => item.key === month) || monthMeta[0];
-  const monthReleases = releases.filter((item) => item.month === month).sort((left, right) => left.day - right.day);
+  const monthReleases = releases
+    .filter((item) => item.month === month && passesIntelligenceFilters(item.id, intelligenceFilters, findingsByReleaseId, readinessByReleaseId))
+    .sort((left, right) => left.day - right.day);
   const totalCells = Math.ceil((monthData.start + monthData.days) / 7) * 7;
   const cells = Array.from({ length: totalCells }, (_, index) => {
     const day = index - monthData.start + 1;
@@ -840,6 +914,15 @@ function ReleaseCalendar({ requestedId, openDetail }: { requestedId?: string; op
         <div><span className="eyebrow">Change & release management</span><h1>Release calendar</h1><p>Trailing 12-month view of production deployments, readiness, risk, and validation conditions.</p></div>
         <div className="calendar-stats"><div><span>This month</span><strong>{monthReleases.length}</strong></div><div><span>High risk</span><strong>{monthReleases.filter((item) => item.risk === "High").length}</strong></div><div><span>Awaiting approval</span><strong>{monthReleases.filter((item) => item.status === "Pending approval").length}</strong></div></div>
       </div>
+
+      <ReleaseIntelligenceSummary findings={releaseIntelligenceFindings} horizonCount={horizonReleaseCount} horizonDays={INTELLIGENCE_HORIZON_DAYS} />
+      <ReleaseIntelligenceFilters filters={intelligenceFilters} onChange={setIntelligenceFilters} />
+
+      <div className="release-intelligence-grid">
+        <ReleaseFindingsList findings={releaseIntelligenceFindings} filters={intelligenceFilters} openDetail={openDetail} />
+        <ReleaseConcentrationPanel groups={releaseConcentrations} />
+      </div>
+
       <div className="calendar-toolbar">
         <div className="month-control"><button disabled={month === monthMeta[0].key} onClick={() => setMonth(month - 1)} aria-label="Previous month">←</button><strong>{monthData.label}</strong><button disabled={month === monthMeta.at(-1)?.key} onClick={() => setMonth(month + 1)} aria-label="Next month">→</button></div>
         <div className="month-tabs">{monthMeta.map((item) => <button className={month === item.key ? "active" : ""} key={item.key} onClick={() => setMonth(item.key)}><span>{item.short}</span><small>{String(item.year).slice(-2)}</small></button>)}</div>
@@ -855,19 +938,57 @@ function ReleaseCalendar({ requestedId, openDetail }: { requestedId?: string; op
             if (day < 1) return <div className="calendar-cell muted-cell" key={`empty-${index}`} />;
             const items = monthReleases.filter((item) => item.day === day);
             const isToday = month === currentMonthKey && day === demoAsOf.getDate();
-            return <div className={`calendar-cell ${isToday ? "today" : ""}`} key={day}><div className="day-number"><span>{day}</span>{isToday && <b>Today</b>}</div>{items.map((item) => <button className={`calendar-event risk-${item.risk.toLowerCase()}`} key={item.id} onClick={() => setSelected(item)}><span>{item.time}</span><strong>{item.title}</strong><small>{item.id}</small></button>)}</div>;
+            return (
+              <div className={`calendar-cell ${isToday ? "today" : ""}`} key={day}>
+                <div className="day-number"><span>{day}</span>{isToday && <b>Today</b>}</div>
+                {items.map((item) => {
+                  const itemFindings = findingsByReleaseId.get(item.id) ?? [];
+                  const readiness = readinessByReleaseId.get(item.id);
+                  const hasHighFinding = itemFindings.some((finding) => finding.severity === "High");
+                  const markerLabel = [
+                    item.title,
+                    itemFindings.length > 0 ? `${itemFindings.length} finding${itemFindings.length === 1 ? "" : "s"}` : "",
+                    readiness && readiness.state !== "Ready" ? readiness.state : "",
+                  ].filter(Boolean).join("; ");
+                  return (
+                    <button
+                      className={`calendar-event risk-${item.risk.toLowerCase()}${hasHighFinding ? " has-finding" : ""}${readiness && readiness.state !== "Ready" ? " has-readiness-gap" : ""}`}
+                      key={item.id}
+                      onClick={() => setSelected(item)}
+                      aria-label={markerLabel}
+                      title={itemFindings.map((finding) => finding.summary).join("; ") || undefined}
+                    >
+                      <span>{item.time}</span>
+                      <strong>{item.title}</strong>
+                      <small>{item.id}{hasHighFinding ? " · flagged" : ""}</small>
+                    </button>
+                  );
+                })}
+              </div>
+            );
           })}
         </div>
       </div>}
       {display === "agenda" && <div className="release-agenda">
-        {monthReleases.map((item) => (
-          <button key={item.id} onClick={() => setSelected(item)}>
-            <span className="agenda-date"><strong>{monthData.short} {item.day}</strong><small>{item.time}</small></span>
-            <span className="agenda-detail"><strong>{item.title}</strong><small>{item.service} · {item.id} · {item.environment}</small></span>
-            <span className="agenda-status"><StatusPill value={item.risk} /><StatusPill value={item.status} /></span>
-            <b aria-hidden="true">→</b>
-          </button>
-        ))}
+        {monthReleases.map((item) => {
+          const itemFindings = findingsByReleaseId.get(item.id) ?? [];
+          const readiness = readinessByReleaseId.get(item.id);
+          return (
+            <button key={item.id} onClick={() => setSelected(item)} aria-label={`Open ${item.title}`}>
+              <span className="agenda-date"><strong>{monthData.short} {item.day}</strong><small>{item.time}</small></span>
+              <span className="agenda-detail">
+                <strong>{item.title}</strong>
+                <small>{item.service} · {item.id} · {item.environment}{itemFindings.length > 0 ? ` · ${itemFindings.length} finding${itemFindings.length === 1 ? "" : "s"}` : ""}</small>
+              </span>
+              <span className="agenda-status">
+                <StatusPill value={item.risk} />
+                <StatusPill value={item.status} />
+                {readiness && readiness.state !== "Ready" && <StatusPill value={readiness.state} />}
+              </span>
+              <b aria-hidden="true">→</b>
+            </button>
+          );
+        })}
         {monthReleases.length === 0 && <div className="empty-state"><strong>No production releases in this month.</strong><span>Select another month to review the trailing twelve-month record.</span></div>}
       </div>}
       {selected && <ReleaseDrawer item={selected} onClose={() => setSelected(null)} onNavigate={openDetail} />}
@@ -880,12 +1001,25 @@ function ReleaseDrawer({ item, onClose, onNavigate }: { item: Release; onClose: 
   const dialogRef = useModalDialog(onClose);
   const titleId = `release-drawer-${item.id}`;
   const parentChangeExists = changeById.has(item.changeId);
+  const readiness = readinessByReleaseId.get(item.id);
+  const releaseFindings = findingsByReleaseId.get(item.id) ?? [];
   return (
     <div className="drawer-backdrop" onClick={onClose} role="presentation">
       <aside ref={dialogRef} className="record-drawer release-drawer" onClick={(event) => event.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1}>
         <div className="drawer-top"><div><span className="eyebrow">Production change</span><h2 id={titleId}>{item.id}</h2></div><button data-dialog-close className="close-button" onClick={onClose} aria-label="Close details">×</button></div>
         <h3>{item.title}</h3>
         <div className="drawer-status"><StatusPill value={item.status} /><StatusPill value={item.risk} /><StatusPill value={item.type} /></div>
+        {readiness && <ReadinessChecklist readiness={readiness} />}
+        {releaseFindings.length > 0 && (
+          <div className="drawer-section findings-drawer-section">
+            <span>Intelligence findings</span>
+            <ul className="drawer-findings">
+              {releaseFindings.map((finding) => (
+                <li key={finding.id}><strong>{finding.rule}</strong><p>{finding.summary}</p></li>
+              ))}
+            </ul>
+          </div>
+        )}
         <div className="release-time-card"><span>Deployment window</span><strong>{releaseMonth.short} {item.day}, {releaseMonth.year}</strong><small>{item.window}</small></div>
         <p className="release-summary">{item.summary}</p>
         <dl className="detail-list"><div><dt>Business service</dt><dd>{item.service}</dd></div><div><dt>Change owner</dt><dd>{item.owner}</dd></div><div><dt>Environment</dt><dd>{item.environment}</dd></div><div><dt>Change type</dt><dd>{item.type}</dd></div></dl>
@@ -924,8 +1058,8 @@ function AboutView({ openDetail }: { openDetail: (view: View, filter?: FilterSta
           <button className="text-link" onClick={() => openDetail("services")}>See the service scorecards →</button>
         </article>
         <article className="panel about-card">
-          <h2>Architecture &amp; posture (Increment 1)</h2>
-          <p>A typed synthetic data model feeds deterministic health engines covered by unit tests, and the UI renders only what the engines return. The app is read-only — no forms, no writes, no auth, no uploads. The ServiceNow feed indicator is simulated: there is no live integration, and no employer, customer, or personal data appears anywhere in the product.</p>
+          <h2>Architecture &amp; posture (Increment 1–2)</h2>
+          <p>A typed synthetic data model feeds deterministic health and release-intelligence engines covered by unit tests; the UI renders only what those engines return. Increment 2 adds collision, blackout, and readiness findings, a weekly leadership brief, a read-only decision register, and local Markdown/CSV exports — still read-only, with no forms, writes, auth, uploads, or live integrations.</p>
         </article>
         <article className="panel about-card suite-card">
           <h2>The Fischer Product Lab suite</h2>
@@ -951,7 +1085,7 @@ function readRouteState() {
   const requestedView = params.get("view") as View | null;
   const view = requestedView && navItems.some((item) => item.id === requestedView) ? requestedView : "overview";
   const filter: FilterState = {};
-  (["status", "outcome", "priority", "service", "search", "releaseId"] as const).forEach((key) => {
+  (["status", "outcome", "priority", "service", "search", "releaseId", "finding", "readiness", "intelligenceKind"] as const).forEach((key) => {
     const value = params.get(key);
     if (value) filter[key] = value;
   });
@@ -1012,7 +1146,8 @@ export default function Home() {
           {view === "incidents" && <DetailTable key={`incidents-${JSON.stringify(filter)}`} view="incidents" initialFilter={filter} openDetail={openDetail} />}
           {view === "problems" && <DetailTable key={`problems-${JSON.stringify(filter)}`} view="problems" initialFilter={filter} openDetail={openDetail} />}
           {view === "changes" && <DetailTable key={`changes-${JSON.stringify(filter)}`} view="changes" initialFilter={filter} openDetail={openDetail} />}
-          {view === "releases" && <ReleaseCalendar key={filter.releaseId || "calendar"} requestedId={filter.releaseId} openDetail={openDetail} />}
+          {view === "releases" && <ReleaseCalendar key={`${filter.releaseId || "calendar"}-${filter.finding || ""}-${filter.readiness || ""}`} requestedId={filter.releaseId} initialFilter={filter} openDetail={openDetail} />}
+          {view === "brief" && <BriefView brief={weeklyBrief} register={decisionRegister} findings={releaseIntelligenceFindings} openDetail={openDetail} />}
           {view === "about" && <AboutView openDetail={openDetail} />}
         </main>
       </div>

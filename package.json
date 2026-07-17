@@ -8,7 +8,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "test": "npm run build && node --test --experimental-strip-types tests/rendered-html.test.mjs tests/health.test.mjs",
+    "test": "npm run build && node --test --experimental-strip-types tests/rendered-html.test.mjs tests/health.test.mjs tests/release-intelligence.test.mjs",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next"
   },
   "dependencies": {

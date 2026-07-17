@@ -18,6 +18,7 @@ test("prerenders the Portfolio Health product surface", async () => {
   assert.match(html, /Problems/);
   assert.match(html, /Changes/);
   assert.match(html, /Release calendar/);
+  assert.match(html, /Leadership brief/);
   assert.match(html, /Synthetic demo dataset/);
   assert.match(html, /Simulated ServiceNow feed/);
   assert.match(html, /demo-badge/);
@@ -28,14 +29,19 @@ test("prerenders the Portfolio Health product surface", async () => {
 });
 
 test("ships the finished product metadata and removes starter assets", async () => {
-  const [page, layout, css, packageJson] = await Promise.all([
+  const [page, layout, css, packageJson, intelligenceUi] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
     readFile(new URL("../package.json", import.meta.url), "utf8"),
+    readFile(new URL("../app/components/release-intelligence.tsx", import.meta.url), "utf8"),
   ]);
 
   assert.match(page, /ReleaseCalendar/);
+  assert.match(page, /BriefView/);
+  assert.match(page, /ReleaseIntelligenceSummary/);
+  assert.match(page, /release-intelligence/);
+  assert.match(intelligenceUi, /Deterministic release intelligence/);
   assert.match(page, /TrendLineChart/);
   assert.match(page, /Opened vs\. closed month over month/);
   assert.match(page, /Array\.from\(\{ length: 12 \}/);
