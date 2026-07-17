@@ -7,7 +7,7 @@
 | Repo | `Fischer-Product-Lab/portfolio-health` |
 | Branch | `main` (production) |
 | Live URL | https://portfolio-health-fpl.vercel.app/ |
-| Gates | `npm test` (13 tests) · `npm run lint` · `npm run build` · `tsc --noEmit` — all green |
+| Gates | `npm test` (20 tests) · `npm run lint` · `npm run build` · `tsc --noEmit` — all green |
 
 ## What V1 is
 
@@ -47,3 +47,4 @@ Deployed on Vercel from `Fischer-Product-Lab/portfolio-health`, production branc
 4. Drawer lineage (incident ↔ problem ↔ change ↔ release) with clickable navigation
 5. About & suite view; sidebar suite links
 6. README / SECURITY.md / threat model; public packaging (this log)
+7. **Increment 2 — Release intelligence:** extended release governance model, blackout/freeze seeds, `lib/release-intelligence.ts` + `lib/exports.ts`, intelligence UI on the release calendar, new Brief view with decision register and local exports, tests and docs

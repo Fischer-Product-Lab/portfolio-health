@@ -15,7 +15,8 @@ Portfolio Health is an executive ITSM operating dashboard from **Fischer Product
 | **Portfolio overview** | Computed portfolio health (score, band, reasons), leadership watchlist, ITSM flow KPIs, operational trends, change execution quality, needs-attention queue, 14-day release horizon |
 | **Service health** | Eight business-service scorecards with computed bands, engine signals, "why this band" reasons, and drill-down into each service's records |
 | **Incidents / Problems / Changes** | Filterable record tables with detail drawers, SLA/RCA risk notes, change outcomes, and linked-record lineage |
-| **Release calendar** | Trailing twelve-month production release calendar (calendar and agenda modes) with readiness, risk, and validation conditions |
+| **Release calendar** | Trailing twelve-month production release calendar (calendar and agenda modes) with readiness, risk, validation conditions, and deterministic release-intelligence findings |
+| **Leadership brief** | Weekly leadership brief, read-only decision register, and local Markdown/CSV exports — every line traceable to record ids |
 | **About & suite** | Product framing, scoring methodology, synthetic/read-only posture, and links to the sibling products |
 
 ## How the health score works
@@ -49,9 +50,11 @@ npm run build   # production build (vinext)
 ## Project structure
 
 - `app/` — Next.js App Router UI (single-page shell, views, drawers, calendar) and the warm-paper/navy visual system in `globals.css`
-- `data/portfolio-health.ts` — typed synthetic dataset: business services, records, releases, monthly flow, lineage seeds
+- `data/portfolio-health.ts` — typed synthetic dataset: business services, records, releases, blackout/freeze windows, monthly flow, lineage seeds
 - `lib/health.ts` — deterministic service and portfolio health engines
-- `tests/` — engine/band/lineage tests and rendered-HTML smoke tests
+- `lib/release-intelligence.ts` — collision, blackout, readiness, concentration, weekly brief, and decision-register engines (Increment 2)
+- `lib/exports.ts` — local Markdown/CSV export builders
+- `tests/` — engine/band/lineage/release-intelligence tests and rendered-HTML smoke tests
 - `docs/` — [PRD](docs/portfolio-health-prd.md), [highlights](docs/highlights.md), [build log](docs/BUILD_LOG.md), and [threat model](docs/threat-model.md)
 
 Toolchain: Next.js App Router with a fully static export (`output: "export"`), TypeScript strict mode, no database, no API routes, no env vars.
