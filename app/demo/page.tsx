@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   businessServices,
@@ -1124,7 +1125,7 @@ export default function Home() {
   return (
     <div className="app-shell">
       <aside className="sidebar">
-        <div className="brand"><a className="brand-home" href="/" aria-label="Portfolio Health title page"><div className="brand-mark">F</div><div><strong>Fischer</strong><span>Product Lab</span></div></a></div>
+        <div className="brand"><Link className="brand-home" href="/" aria-label="Portfolio Health title page"><div className="brand-mark">F</div><div><strong>Fischer</strong><span>Product Lab</span></div></Link></div>
         <div className="product-chip"><span>Current product</span><strong>Portfolio Health</strong></div>
         <nav aria-label="Primary navigation">{navItems.map((item) => <button key={item.id} className={view === item.id ? "active" : ""} onClick={() => openDetail(item.id)}><span className={`nav-glyph glyph-${item.id}`} />{item.label}</button>)}</nav>
         <div className="sidebar-footer"><div><span className="live-dot" /><div><strong>Simulated ServiceNow feed</strong><small>Synthetic snapshot · no live connection</small></div></div><span className="demo-badge">DEMO</span></div>
@@ -1135,7 +1136,7 @@ export default function Home() {
       </aside>
       <div className="main-column">
         <header className="topbar">
-          <div className="mobile-brand"><a className="brand-home" href="/" aria-label="Portfolio Health title page"><div className="brand-mark">F</div><div><span>Fischer Product Lab</span><strong>{activeLabel}</strong></div></a></div>
+          <div className="mobile-brand"><Link className="brand-home" href="/" aria-label="Portfolio Health title page"><div className="brand-mark">F</div><div><span>Fischer Product Lab</span><strong>{activeLabel}</strong></div></Link></div>
           <nav className="mobile-nav" aria-label="Mobile navigation">{navItems.map((item) => <button key={item.id} className={view === item.id ? "active" : ""} onClick={() => openDetail(item.id)}>{item.short}</button>)}</nav>
           <div className="topbar-context"><span>Fischer Product Lab</span><b>/</b><span>Portfolio Health</span><b>/</b><strong>{activeLabel}</strong></div>
           <div className="topbar-actions"><button className="sync-button" aria-label="Refresh synthetic demo snapshot" onClick={() => { setLastSync("just now"); window.setTimeout(() => setLastSync("1 min ago"), 60000); }}><span className="sync-icon">↻</span><span><b>Demo snapshot</b><small>Refreshed {lastSync}</small></span></button><span className="avatar" role="img" aria-label="Trevor Fischer demo profile">TF</span></div>

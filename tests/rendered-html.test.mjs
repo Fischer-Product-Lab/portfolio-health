@@ -40,7 +40,7 @@ test("prerenders a cinematic title page at /", async () => {
   assert.match(html, /href="\/demo"/);
   assert.match(html, /marketing-grain/);
   assert.match(html, /marketing-light/);
-  assert.match(html, /--font-geist/);
+  assert.match(html, /geist_/);
   assert.match(html, /How it decides/);
   assert.doesNotMatch(html, /How Portfolio Health is calculated/);
   assert.doesNotMatch(html, /trusted by|Trusted by/i);
@@ -136,6 +136,6 @@ test("ships the finished product metadata and removes starter assets", async () 
   assert.match(css, /#C4A35A|#c4a35a/);
   assert.match(css, /marketing-grain/);
   assert.doesNotMatch(packageJson, /react-loading-skeleton/);
-  await access(new URL("../public/og.png", root));
+  await access(new URL("../public/og.png", import.meta.url));
   await assert.rejects(access(new URL("../app/_sites-preview/SkeletonPreview.tsx", root)));
 });
